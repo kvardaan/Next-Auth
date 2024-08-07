@@ -5,6 +5,7 @@ import { PrismaAdapter } from '@auth/prisma-adapter'
 import { db } from '@/lib/db'
 import authConfig from '@/auth.config'
 import { getUserById } from '@/lib/data/user'
+import { getTwoFacorConfirmationByUserId } from './lib/data/two-factor-confirmation'
 
 export const {
 	handlers: { GET, POST },
@@ -33,7 +34,20 @@ export const {
 
 			if (!existingUser?.emailVerified) return false
 
-			// TODO: Add 2FA check
+			if (existingUser.isTwoFactorEnabled) {
+				const twoFactorConfirmation = await getTwoFacorConfirmationByUserId(existingUser.id)
+
+				if (!twoFactorConfirmation) return false
+
+				/**
+				 * Delete two factor confirmation for next sign in
+				 * Or add a field in the model to expire it
+				 */
+				await db.twoFactorConfirmation.delete({
+					where: { id: twoFactorConfirmation.id },
+				})
+			}
+
 			return true
 		},
 		async session({ session, token }) {

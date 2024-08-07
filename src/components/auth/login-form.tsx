@@ -30,6 +30,7 @@ export const LoginForm = () => {
 			? 'Email already in use with different provider!'
 			: ''
 
+	const [showTwoFactor, setShowTwoFactor] = useState(false)
 	const [error, setError] = useState<string | undefined>('')
 	const [success, setSuccess] = useState<string | undefined>('')
 	const [isPending, startTransition] = useTransition()
@@ -39,6 +40,7 @@ export const LoginForm = () => {
 		defaultValues: {
 			email: '',
 			password: '',
+			code: '',
 		},
 	})
 
@@ -47,9 +49,20 @@ export const LoginForm = () => {
 		setSuccess('')
 
 		startTransition(async () => {
-			const response = await login(values)
-			setError(response?.error)
-			setSuccess(response?.success)
+			try {
+				const response = await login(values)
+				if (response?.error) {
+					form.reset()
+					setError(response?.error)
+				} else if (response?.success) {
+					form.reset()
+					setSuccess(response?.success)
+				} else if (response?.twoFactor) {
+					setShowTwoFactor(true)
+				}
+			} catch {
+				setError('Something went wrong!')
+			}
 		})
 	}
 
@@ -63,48 +76,72 @@ export const LoginForm = () => {
 			<Form {...form}>
 				<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
 					<div className="space-y-4">
-						{/* Email */}
-						<FormField
-							name="email"
-							control={form.control}
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel>Email</FormLabel>
-									<FormControl>
-										<Input
-											{...field}
-											disabled={isPending}
-											type="email"
-											placeholder="john.doe@example.com"
-										/>
-									</FormControl>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
+						{showTwoFactor && (
+							<FormField
+								name="code"
+								control={form.control}
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Two Facor Code</FormLabel>
+										<FormControl>
+											<Input {...field} disabled={isPending} placeholder="123456" />
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+						)}
+						{!showTwoFactor && (
+							<>
+								{/* Email */}
+								<FormField
+									name="email"
+									control={form.control}
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Email</FormLabel>
+											<FormControl>
+												<Input
+													{...field}
+													disabled={isPending}
+													type="email"
+													placeholder="john.doe@example.com"
+												/>
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
 
-						{/* Password */}
-						<FormField
-							name="password"
-							control={form.control}
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel>Password</FormLabel>
-									<FormControl>
-										<Input {...field} disabled={isPending} type="password" placeholder="******" />
-									</FormControl>
-									<Button size="sm" variant="link" asChild className="px-0 font-normal">
-										<Link href="/auth/reset">Forgot Password</Link>
-									</Button>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
+								{/* Password */}
+								<FormField
+									name="password"
+									control={form.control}
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Password</FormLabel>
+											<FormControl>
+												<Input
+													{...field}
+													disabled={isPending}
+													type="password"
+													placeholder="******"
+												/>
+											</FormControl>
+											<Button size="sm" variant="link" asChild className="px-0 font-normal">
+												<Link href="/auth/reset">Forgot Password</Link>
+											</Button>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+							</>
+						)}
 					</div>
 					<FormError message={error || urlError} />
 					<FormSuccess message={success} />
 					<Button type="submit" className="w-full" disabled={isPending}>
-						Login
+						{showTwoFactor ? 'Confirm' : 'Login'}
 					</Button>
 				</form>
 			</Form>
