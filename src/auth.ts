@@ -5,7 +5,8 @@ import { PrismaAdapter } from '@auth/prisma-adapter'
 import { db } from '@/lib/db'
 import authConfig from '@/auth.config'
 import { getUserById } from '@/lib/data/user'
-import { getTwoFacorConfirmationByUserId } from './lib/data/two-factor-confirmation'
+import { getTwoFacorConfirmationByUserId } from '@/lib/data/two-factor-confirmation'
+import { getAccountByUserId } from './lib/data/account'
 
 export const {
 	handlers: { GET, POST },
@@ -59,6 +60,15 @@ export const {
 				session.user.role = token.role as UserRole
 			}
 
+			if (session.user) {
+				session.user.isTwoFactorEnabled = token.isTwoFactorEnabled as boolean
+			}
+
+			if (session.user) {
+				session.user.name = token.name
+				session.user.isOAuth = token.isOAuth as boolean
+			}
+
 			return session
 		},
 
@@ -69,7 +79,12 @@ export const {
 
 			if (!existingUser) return token
 
+			const existingAccount = await getAccountByUserId(existingUser.id)
+
+			token.isOAuth = !!existingAccount
+			token.name = existingUser.name
 			token.role = existingUser.role
+			token.isTwoFactorEnabled = existingUser.isTwoFactorEnabled
 			return token
 		},
 	},

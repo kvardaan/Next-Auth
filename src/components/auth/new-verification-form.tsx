@@ -24,7 +24,7 @@ const NewVerificationForm = () => {
 		}
 		try {
 			const data = await newVerification(token)
-			console.log(data)
+
 			setSuccess(data.success)
 			setError(data.error)
 		} catch {
